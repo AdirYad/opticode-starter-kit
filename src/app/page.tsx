@@ -20,9 +20,8 @@ export default function Home() {
           Ship a real product, <span className="text-primary">without the boilerplate</span>.
         </h1>
         <p className="text-muted-foreground max-w-2xl text-lg text-pretty">
-          A production-grade foundation wired end to end: database, auth, UI, and AI. Clone it,
-          fill in your <code className="bg-muted rounded px-1 py-0.5 text-sm">.env</code>, and
-          build.
+          A production-grade foundation wired end to end: database, auth, UI, and AI. Clone it, fill
+          in your <code className="bg-muted rounded px-1 py-0.5 text-sm">.env</code>, and build.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button render={<Link href="/dashboard">Open dashboard</Link>} size="lg" />

@@ -1,6 +1,6 @@
 # Project guide
 
-Guidance for any AI agent (and humans) working in this repository. Read this before making changes.
+Guidance for any AI agent (and humans) working in this repository. Read this before making changes. The goal is the cleanest, simplest correct code, so follow the architecture and conventions below rather than inventing your own.
 
 ## What this is
 
@@ -16,11 +16,65 @@ A production-grade starter for building real web apps. The stack is fixed and op
 | Hosting   | **Vercel**                                                     |
 | Language  | **TypeScript**, `strict` mode                                  |
 
+## Architecture
+
+The code is organized in layers with a one-way dependency direction. An outer layer may import from an inner layer, never the reverse.
+
+```
+app/         UI routes and server actions. Thin: it orchestrates, it does not hold business logic.
+components/   Presentational React. ui/ holds generated primitives; feature folders hold composed UI.
+lib/         Cross-cutting helpers: env, supabase clients, utils.
+db/          Data access: schema, client, queries. The only place that talks to Postgres.
+config/      Static project configuration (site name, brand, base URL).
+```
+
+Dependency rules:
+
+- `db/` and `lib/` never import from `app/` or `components/`.
+- `components/` never imports from `app/`. Components receive data through props.
+- Only server code (Server Components, Server Actions, Route Handlers) imports `db`, `lib/env`, or `lib/supabase/server`.
+
+Request lifecycle:
+
+1. A request hits `proxy.ts`, which refreshes the Supabase session and redirects unauthenticated users away from protected routes.
+2. A Server Component renders and reads data directly with `db` (Drizzle) or the Supabase server client.
+3. A user action submits a form to a Server Action (`"use server"`), which validates input, writes through `db`, then calls `revalidatePath` so the page reflects the change.
+
+Server vs client:
+
+- Everything is a Server Component by default. Add `"use client"` only for interactivity (state, effects, event handlers, browser APIs).
+- Keep client components small and at the leaves of the tree. Fetch on the server and pass data down as props.
+- Never import a server-only module (`db`, `env`, `lib/supabase/server`) into a client component.
+
+Data flow:
+
+- Reads: Server Component, then `db` or the Supabase server client, then render.
+- Writes: Server Action, then `db`, then `revalidatePath` or `redirect`.
+- Route Handlers (`api/`) are only for webhooks, third-party callers, and streaming, not for your own UI reads.
+
+## Where things go
+
+| You need to add                 | Put it in                                                                |
+| ------------------------------- | ------------------------------------------------------------------------ |
+| A page                          | `src/app/<route>/page.tsx` (Server Component)                            |
+| A protected page                | a route under a prefix in `proxy.ts` `protectedPaths`                    |
+| A form mutation                 | a Server Action in `actions.ts` next to the route                        |
+| A webhook or streaming endpoint | `src/app/api/<name>/route.ts`                                            |
+| A database table                | `src/db/schema.ts`, then a migration                                     |
+| A reusable query                | `src/db/queries/<name>.ts` (server-only)                                 |
+| A UI primitive (button, dialog) | `npx shadcn@latest add <name>`, lands in `components/ui`                 |
+| A composed feature component    | `src/components/<feature>/`                                              |
+| A shared helper or hook         | `src/lib/`                                                               |
+| Project name, brand, base URL   | `src/config/site.ts`                                                     |
+| An environment variable         | `src/lib/env.ts` (server) or `NEXT_PUBLIC_` (client), and `.env.example` |
+
 ## Commands
 
 Use **npm**.
 
 ```bash
+npm run setup        # one-command install on a fresh machine (deps + env file)
+npm run init-project # set name, description, brand for a new project
 npm run dev          # local dev server (Turbopack)
 npm run build        # production build
 npm run typecheck    # tsc --noEmit, run before declaring work done
@@ -51,6 +105,7 @@ src/
     dashboard/          # example protected route
     robots.ts sitemap.ts# SEO
   components/ui/         # shadcn components (generated, edit sparingly)
+  config/site.ts        # project name, description, base URL
   db/
     index.ts            # database client
     schema.ts           # Drizzle schema, the source of truth for tables
@@ -59,6 +114,7 @@ src/
     supabase/           # client.ts (browser) · server.ts · middleware.ts
     utils.ts            # cn()
   proxy.ts              # refreshes auth session + guards private routes (Next 16 convention)
+scripts/                # setup.mjs (install) + init-project.mjs (new project)
 drizzle/                # generated SQL migrations (do not hand-edit)
 ```
 
@@ -106,15 +162,23 @@ drizzle/                # generated SQL migrations (do not hand-edit)
 
 ## SEO / GEO
 
-- Per-page metadata via the `metadata` export (title template and OpenGraph are set in `layout.tsx`).
+- Per-page metadata via the `metadata` export. The defaults (title template, OpenGraph) live in `layout.tsx` and read from `src/config/site.ts`.
 - `robots.ts`, `sitemap.ts`, and `public/llms.txt` exist. Update them as routes change. `llms.txt` helps AI search engines; replace its placeholder copy per project.
 
-## Conventions
+## Clean code
 
-- TypeScript `strict`. No `any` unless justified with a comment.
+- One responsibility per file and per function. If a file mixes concerns or passes about 200 lines, split it.
+- Name by intent, no abbreviations. Booleans read as predicates (`isLoading`, `hasAccess`, `canEdit`).
+- Validate at every boundary with `zod`: form input, request bodies, env. Trust internal types after the boundary.
+- Keep components presentational. Push data access and business rules into `db/` and `lib/`.
+- Handle errors explicitly. Return a typed result or a clear message from actions; do not swallow errors. The one documented exception is the cookie `setAll` no-op in `lib/supabase/server.ts`.
+- TypeScript `strict`. No `any` without a comment explaining why.
+- Async correctness in Next 16: `await createClient()`, and `await` the `params` and `searchParams` props, which are Promises.
 - Server-first: keep data fetching and secrets in Server Components, Actions, and Route Handlers. Add `"use client"` only when you need interactivity.
-- Validate external input with `zod`.
-- Format with Prettier (`printWidth` 100). Run `npm run format` before committing.
+- Reuse before you abstract, but do not over-abstract. Extract a shared piece on the third repeat, not the first.
+- Accessibility is part of done: label inputs, use semantic elements, keep it keyboard-navigable.
+- Comments explain why, not what. Delete dead code instead of commenting it out.
+- Run `npm run format`, `npm run typecheck`, and `npm run lint` before calling work done.
 
 ## Guardrails, do not
 
@@ -123,6 +187,29 @@ drizzle/                # generated SQL migrations (do not hand-edit)
 - Put database writes or secret keys in Client Components.
 - Hand-edit files in `drizzle/` (generated) or rewrite generated `components/ui` wholesale.
 - Run destructive DB commands (`db:push` against production, `DROP`, truncate) without explicit confirmation.
+
+## Start a new project
+
+From a fresh clone:
+
+1. `npm run setup` to install dependencies and create `.env`.
+2. Fill `.env` with your Supabase and AI Gateway values.
+3. `npm run init-project` to set the project name, description, and slug (or edit `src/config/site.ts`). Set the brand color in `src/app/globals.css` (`--primary`).
+4. Define your tables in `src/db/schema.ts`, then `npm run db:push`.
+5. Replace `src/app/page.tsx` and `public/llms.txt` with your content.
+6. `npm run dev`.
+
+## Install on another machine
+
+Anything with Node 20+ and git:
+
+```bash
+git clone <your-repo-url> my-app
+cd my-app
+npm run setup
+```
+
+`npm run setup` installs dependencies and creates `.env` from the template, then prints what to fill in. It is safe to re-run.
 
 ## Deploy (Vercel)
 

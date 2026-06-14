@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "init-project": "node scripts/init-project.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

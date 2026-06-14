@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { siteConfig } from "@/config/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,17 +15,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(siteConfig.url),
   title: {
-    default: "Opticode Starter",
-    template: "%s · Opticode Starter",
+    default: siteConfig.name,
+    template: `%s · ${siteConfig.name}`,
   },
-  description:
-    "Production-grade starter: Next.js 16, Supabase, Drizzle, shadcn/ui, and the Vercel AI Gateway.",
+  description: siteConfig.description,
   openGraph: {
-    title: "Opticode Starter",
-    description:
-      "Build production web apps fast: Next.js 16, Supabase, Drizzle, shadcn/ui, AI Gateway.",
+    title: siteConfig.name,
+    description: siteConfig.description,
     type: "website",
   },
 };
