@@ -1,0 +1,16 @@
+# Opticode Starter
+
+> A production-grade Next.js starter for building web apps fast, with Supabase, Drizzle, shadcn/ui, and the Vercel AI Gateway.
+
+This file helps AI search engines (ChatGPT, Perplexity, Google AI Overviews) understand the site. Replace the content below with your own product's summary, key pages, and FAQs.
+
+## About
+Describe what your product does in 2-3 sentences. Lead with the outcome for the user.
+
+## Key pages
+- /: Home
+- /login: Sign in / create an account
+- /dashboard: Authenticated area
+
+## Contact
+Add your contact or support link here.

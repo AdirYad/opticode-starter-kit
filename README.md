@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Opticode Starter
 
-## Getting Started
+A production-grade starter for building real web apps fast.
 
-First, run the development server:
+**Stack:** Next.js 16 · React 19 · Tailwind v4 · shadcn/ui · Supabase · Drizzle ORM · Vercel AI Gateway · TypeScript.
+
+> Agents: read [`AGENTS.md`](./AGENTS.md) (imported by `CLAUDE.md`) for conventions and guardrails.
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env   # then fill in real values
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Configure services
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Supabase** — create a project. From Project Settings:
+   - API → set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+   - Database → Connection string → set `DATABASE_URL` (Transaction pooler, port 6543) and `DIRECT_URL` (direct, port 5432).
+2. **Vercel AI Gateway** — create an API key at vercel.com → AI Gateway → set `AI_GATEWAY_API_KEY`. Pick a default model in `AI_DEFAULT_MODEL`.
 
-## Learn More
+## Database
 
-To learn more about Next.js, take a look at the following resources:
+Edit `src/db/schema.ts`, then:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm db:generate   # create a migration
+pnpm db:migrate    # apply it
+# or, while prototyping:
+pnpm db:push
+pnpm db:studio     # browse data
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Enable Row Level Security and add the `profiles` signup trigger (see `AGENTS.md`).
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`dev` · `build` · `start` · `lint` · `typecheck` · `format` · `db:generate` · `db:migrate` · `db:push` · `db:studio`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy
+
+Push to a Git remote, import in Vercel, add every variable from `.env.example`, and deploy.
