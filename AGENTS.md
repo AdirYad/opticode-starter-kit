@@ -151,6 +151,7 @@ drizzle/                # generated SQL migrations (do not hand-edit)
 ## UI (shadcn/ui + Tailwind v4)
 
 - Add components with `npx shadcn@latest add <name>`. They land in `src/components/ui/`.
+- For a link styled as a button, apply `buttonVariants({ ... })` to a `<Link>` (a real anchor). Do not wrap a `<Link>` in `<Button>`: this Button is built on Base UI and expects a native `<button>`, so a non-button render breaks accessibility and warns in the console.
 - Theming is CSS variables in `src/app/globals.css` (oklch). The brand accent (`--primary`, `--ring`) is blue `#3b82f6`. Adjust tokens there, not per component.
 - Compose classes with `cn()` from `@/lib/utils`. Tailwind v4 has no `tailwind.config.js`; configure via `@theme` in `globals.css`.
 - RTL: the default is LTR. For a Hebrew or RTL site, set `<html dir="rtl">` in `layout.tsx`; Tailwind logical utilities and shadcn handle the rest.

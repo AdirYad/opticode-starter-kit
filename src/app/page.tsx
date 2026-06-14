@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const features = [
@@ -24,8 +24,12 @@ export default function Home() {
           in your <code className="bg-muted rounded px-1 py-0.5 text-sm">.env</code>, and build.
         </p>
         <div className="flex flex-wrap gap-3">
-          <Button render={<Link href="/dashboard">Open dashboard</Link>} size="lg" />
-          <Button render={<Link href="/login">Sign in</Link>} size="lg" variant="outline" />
+          <Link href="/dashboard" className={buttonVariants({ size: "lg" })}>
+            Open dashboard
+          </Link>
+          <Link href="/login" className={buttonVariants({ size: "lg", variant: "outline" })}>
+            Sign in
+          </Link>
         </div>
       </section>
 

@@ -1,0 +1,5 @@
+.claude/
+drizzle/
+.next/
+pnpm-lock.yaml
+package-lock.json
