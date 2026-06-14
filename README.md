@@ -23,7 +23,7 @@ A production-grade starter for building real web apps fast. Auth, database, AI, 
 ## Quick start
 
 ```bash
-git clone <your-repo-url> my-app
+git clone https://github.com/AdirYad/opticode-starter-kit.git my-app
 cd my-app
 npm run setup        # installs dependencies and creates .env from the template
 ```
