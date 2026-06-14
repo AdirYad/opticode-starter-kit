@@ -9,17 +9,13 @@ import { z } from "zod";
  * from process.env where needed, because Next.js inlines them at build time.
  */
 const schema = z.object({
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required (Supabase pooled connection)."),
-  DIRECT_URL: z
-    .string()
-    .min(1, "DIRECT_URL is required (Supabase direct connection for migrations)."),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required (Supabase connection string)."),
   AI_GATEWAY_API_KEY: z.string().min(1, "AI_GATEWAY_API_KEY is required (Vercel AI Gateway)."),
   AI_DEFAULT_MODEL: z.string().min(1).default("openai/gpt-4o-mini"),
 });
 
 const parsed = schema.safeParse({
   DATABASE_URL: process.env.DATABASE_URL,
-  DIRECT_URL: process.env.DIRECT_URL,
   AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
   AI_DEFAULT_MODEL: process.env.AI_DEFAULT_MODEL,
 });

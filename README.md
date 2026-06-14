@@ -9,30 +9,30 @@ A production-grade starter for building real web apps fast.
 ## Quick start
 
 ```bash
-pnpm install
+npm install
 cp .env.example .env   # then fill in real values
-pnpm dev
+npm run dev
 ```
 
 Open http://localhost:3000.
 
 ## Configure services
 
-1. **Supabase** — create a project. From Project Settings:
-   - API → set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-   - Database → Connection string → set `DATABASE_URL` (Transaction pooler, port 6543) and `DIRECT_URL` (direct, port 5432).
-2. **Vercel AI Gateway** — create an API key at vercel.com → AI Gateway → set `AI_GATEWAY_API_KEY`. Pick a default model in `AI_DEFAULT_MODEL`.
+1. **Supabase:** create a project. From Project Settings:
+   - API: set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+   - Database, Connection string: set `DATABASE_URL`.
+2. **Vercel AI Gateway:** create an API key at vercel.com, AI Gateway, then set `AI_GATEWAY_API_KEY`. Pick a default model in `AI_DEFAULT_MODEL`.
 
 ## Database
 
 Edit `src/db/schema.ts`, then:
 
 ```bash
-pnpm db:generate   # create a migration
-pnpm db:migrate    # apply it
+npm run db:generate   # create a migration
+npm run db:migrate    # apply it
 # or, while prototyping:
-pnpm db:push
-pnpm db:studio     # browse data
+npm run db:push
+npm run db:studio     # browse data
 ```
 
 Enable Row Level Security and add the `profiles` signup trigger (see `AGENTS.md`).

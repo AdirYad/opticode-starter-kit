@@ -9,7 +9,7 @@ export const maxDuration = 30;
  *
  * The model is a plain "<provider>/<model>" string (e.g. "openai/gpt-4o-mini",
  * "anthropic/claude-sonnet-4.5"). With AI_GATEWAY_API_KEY set, the AI SDK
- * sends the request through the gateway automatically — no per-provider keys.
+ * sends the request through the gateway automatically, with no per-provider keys.
  *
  * POST body: { "prompt": "..." }  ->  { "text": "..." }
  *

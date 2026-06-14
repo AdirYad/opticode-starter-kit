@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Refreshes the Supabase auth session on every request and guards private
- * routes. Keep the code between `createServerClient` and `getUser()` empty —
+ * routes. Keep the code between `createServerClient` and `getUser()` empty;
  * inserting logic there is a common source of hard-to-debug auth bugs.
  */
 export async function updateSession(request: NextRequest) {

@@ -2,9 +2,8 @@ import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
 
 /**
- * drizzle-kit reads this when you run db:generate / db:migrate / db:push / db:studio.
- * Migrations use DIRECT_URL (the direct, port 5432 connection) — NOT the pooled
- * runtime URL — because schema changes need a session-mode connection.
+ * drizzle-kit reads this when you run db:generate, db:migrate, db:push or
+ * db:studio. It uses the same DATABASE_URL the app uses.
  */
 export default defineConfig({
   schema: "./src/db/schema.ts",
@@ -12,7 +11,7 @@ export default defineConfig({
   dialect: "postgresql",
   casing: "snake_case",
   dbCredentials: {
-    url: process.env.DIRECT_URL!,
+    url: process.env.DATABASE_URL!,
   },
   verbose: true,
   strict: true,

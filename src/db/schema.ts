@@ -5,8 +5,8 @@ import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
  * snake_case in the database via the `casing: "snake_case"` option (see
  * drizzle.config.ts and src/db/index.ts).
  *
- * `profiles.id` is meant to equal `auth.users.id` from Supabase Auth — create
- * a row on signup (e.g. via a Postgres trigger or in your signup action).
+ * `profiles.id` is meant to equal `auth.users.id` from Supabase Auth. Create
+ * the row on signup with a Postgres trigger (see AGENTS.md).
  */
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(), // = auth.users.id

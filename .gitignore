@@ -30,7 +30,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files — secrets stay out of git, but the example is tracked
+# env files: secrets stay out of git, but the example is tracked
 .env
 .env.*
 !.env.example

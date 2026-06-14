@@ -4,11 +4,11 @@ import { env } from "@/lib/env";
 import * as schema from "./schema";
 
 /**
- * App-runtime database client.
+ * Database client used everywhere in the app.
  *
- * Uses Supabase's pooled "Transaction" connection (DATABASE_URL, port 6543),
- * which does NOT support prepared statements — hence `prepare: false`.
- * Migrations use a different (direct) connection; see drizzle.config.ts.
+ * `prepare: false` keeps this compatible with any Supabase connection string,
+ * including the transaction pooler, which does not support prepared statements.
+ * It is safe to leave on for direct connections too.
  */
 const client = postgres(env.DATABASE_URL, { prepare: false });
 

@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Opticode Starter",
     description:
-      "Build production web apps fast — Next.js 16, Supabase, Drizzle, shadcn/ui, AI Gateway.",
+      "Build production web apps fast: Next.js 16, Supabase, Drizzle, shadcn/ui, AI Gateway.",
     type: "website",
   },
 };
