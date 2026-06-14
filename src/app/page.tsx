@@ -14,7 +14,7 @@ export default function Home() {
     <main className="mx-auto flex min-h-svh max-w-5xl flex-col justify-center gap-10 px-6 py-16">
       <section className="space-y-6">
         <span className="bg-primary/10 text-primary inline-flex rounded-full px-3 py-1 text-sm font-medium">
-          Opticode Starter
+          OptiCode Starter Kit
         </span>
         <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
           Ship a real product, <span className="text-primary">without the boilerplate</span>.

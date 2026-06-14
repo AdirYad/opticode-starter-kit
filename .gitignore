@@ -38,6 +38,13 @@ yarn-error.log*
 # vercel
 .vercel
 
+# claude code: skills live in .agents/skills (committed); .claude/skills is a
+# local junction to them for Claude Code discovery, so keep it out of git
+.claude/skills
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# skills CLI lockfile — not used in this project
+skills-lock.json

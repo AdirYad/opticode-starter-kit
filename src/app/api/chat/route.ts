@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
   const { text } = await generateText({
     model: env.AI_DEFAULT_MODEL,
-    system: "You are a helpful assistant for the Opticode Starter app.",
+    system: "You are a helpful assistant for the OptiCode Starter Kit app.",
     prompt,
   });
 

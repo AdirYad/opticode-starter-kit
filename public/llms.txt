@@ -1,4 +1,4 @@
-# Opticode Starter
+# OptiCode Starter Kit
 
 > A production-grade Next.js starter for building web apps fast, with Supabase, Drizzle, shadcn/ui, and the Vercel AI Gateway.
 

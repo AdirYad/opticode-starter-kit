@@ -24,7 +24,10 @@ const toSlug = (value) =>
     .replace(/^-+|-+$/g, "") || "my-app";
 
 const name = await ask("Project name", "My App");
-const description = await ask("Short description", "A web app built with the Opticode Starter.");
+const description = await ask(
+  "Short description",
+  "A web app built with the OptiCode Starter Kit.",
+);
 const slug = toSlug(name);
 const reset = (await ask("Reset git history for a clean start? y/N", "N")).toLowerCase() === "y";
 rl.close();

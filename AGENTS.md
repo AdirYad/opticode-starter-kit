@@ -1,6 +1,6 @@
 # Project guide
 
-Guidance for any AI agent (and humans) working in this repository. Read this before making changes. The goal is the cleanest, simplest correct code, so follow the architecture and conventions below rather than inventing your own.
+Guidance for any AI agent (and humans) working in this repository. Read this before making changes. The goal is the cleanest, simplest correct code, so follow the architecture and conventions below rather than inventing your own. When you change a convention, update this file in the same change so it never drifts from the code.
 
 ## What this is
 
@@ -88,6 +88,8 @@ npm run db:studio    # open Drizzle Studio
 
 After any code change, run `npm run typecheck` and `npm run lint`.
 
+A Husky `pre-commit` hook runs `lint-staged`, which auto-fixes staged files with `eslint --fix` then `prettier --write`. It installs on `npm install` (the `prepare` script), so commits stay formatted and linted with no extra steps.
+
 ## Environment
 
 - Config lives in `.env` (gitignored). This project does not use `.env.local`.
@@ -122,9 +124,15 @@ drizzle/                # generated SQL migrations (do not hand-edit)
 
 - One connection string, `DATABASE_URL`, is used everywhere: the app at runtime and `drizzle-kit` migrations.
 - `prepare: false` is set in `src/db/index.ts` so the same URL works with any Supabase connection string, including the transaction pooler, which does not support prepared statements. Do not remove that flag.
-- Workflow: edit `src/db/schema.ts`, run `npm run db:generate`, review the SQL in `drizzle/`, then `npm run db:migrate`. For quick prototyping, `npm run db:push`.
+- Workflow: edit `src/db/schema.ts`, run `npm run db:generate`, review the SQL in `drizzle/`, then `npm run db:migrate`. `db:push` skips the migration file; use it only against your local scratch DB, never anywhere shared (staging, prod, a teammate's machine).
 - Column naming: write camelCase in the schema; it maps to snake_case columns automatically (`casing: "snake_case"`). Do not rename existing columns casually, it breaks data.
 - Row Level Security: Supabase tables are exposed via PostgREST. Enable RLS and write policies for any table holding user data. Drizzle runs server-side and bypasses RLS, so keep all DB writes in server code, never in the browser.
+- Schema is the single source of truth for types. Derive row and insert types with `typeof table.$inferSelect` and `typeof table.$inferInsert`; never hand-write a parallel `interface` that can drift.
+- Select only the columns you need (`db.select({ id: t.id, ... })` or `columns` in the query API), not the whole row. It is faster and avoids leaking columns you did not intend to expose.
+- Wrap multi-statement writes in `db.transaction(async (tx) => { ... })` so a partial failure rolls back. Never fire a sequence of dependent writes without one.
+- Index columns you filter, join, or order by, especially every foreign key. Declare the index in `schema.ts` with `index()`, then generate and migrate.
+- Migrations are immutable history. Generate, review the SQL, and commit it alongside the schema change. Never edit or delete a migration that has run anywhere shared; write a new one to change course.
+- Make the DB guarantee shape, not the app: use `notNull()`, sensible `default`s, and `timestamp(..., { withTimezone: true }).defaultNow()`. Set `references(() => other.id, { onDelete: "cascade" })` deliberately, deciding cascade vs restrict per relation.
 - `profiles.id` is meant to equal `auth.users.id`. Create the row on signup with a Postgres trigger:
   ```sql
   create or replace function public.handle_new_user()
@@ -145,21 +153,92 @@ drizzle/                # generated SQL migrations (do not hand-edit)
   - `lib/supabase/server.ts` for Server Components, Server Actions, and Route Handlers. It is async (`cookies()` is async in Next 16), so always `await createClient()`.
   - `lib/supabase/middleware.ts` is the session refresh helper, called from `src/proxy.ts`.
 - For authorization in server code, use `getUser()` (it revalidates against Supabase), not `getSession()`.
+- Authentication is not authorization. `getUser()` tells you who the caller is; you still have to check what they may touch. The proxy guards navigation, not individual mutations, so re-check in every Server Action: call `getUser()`, then scope the query to that user's id and verify ownership. A valid session does not by itself grant access to a given row.
+- The anon key is the only Supabase key that may reach the browser. The service-role key bypasses RLS, so keep it server-only and use it sparingly, never in a Client Component.
 - In `proxy.ts`, keep the code between `createServerClient` and `getUser()` empty. Inserting logic there causes random logouts.
 - Add private routes by extending `protectedPaths` in `lib/supabase/middleware.ts`.
 
 ## UI (shadcn/ui + Tailwind v4)
 
+shadcn/ui:
+
 - Add components with `npx shadcn@latest add <name>`. They land in `src/components/ui/`.
-- For a link styled as a button, apply `buttonVariants({ ... })` to a `<Link>` (a real anchor). Do not wrap a `<Link>` in `<Button>`: this Button is built on Base UI and expects a native `<button>`, so a non-button render breaks accessibility and warns in the console.
-- Theming is CSS variables in `src/app/globals.css` (oklch). The brand accent (`--primary`, `--ring`) is blue `#3b82f6`. Adjust tokens there, not per component.
-- Compose classes with `cn()` from `@/lib/utils`. Tailwind v4 has no `tailwind.config.js`; configure via `@theme` in `globals.css`.
-- RTL: the default is LTR. For a Hebrew or RTL site, set `<html dir="rtl">` in `layout.tsx`; Tailwind logical utilities and shadcn handle the rest.
+- You own the generated code, but treat `components/ui` as close to upstream. Re-running `add` overwrites a file, so customize through composition (wrap a primitive in a feature component) rather than editing `ui/`. When you must touch a primitive, keep the change small and comment why.
+- New visual variants belong in the component's `cva` config (the `*Variants` object), not as one-off `className` overrides scattered across the app. Define a variant once, reuse it everywhere.
+- For a link styled as a button, apply `buttonVariants({ ... })` to a `<Link>` (a real anchor). Do not wrap a `<Link>` in `<Button>`: this Button is built on Base UI and expects a native `<button>`, so a non-button render breaks accessibility and warns in the console. When you genuinely need Button semantics on another element, use the `asChild` (Slot) prop, which is the supported polymorphic form.
+- Forms: see the Validation section. One zod schema, React Hook Form + `zodResolver` on the client, the same schema re-checked in the Server Action.
+- Toasts: use Sonner (`sonner`), the current shadcn toast.
+- Do not strip the built-in `aria-*`, focus rings, or `sr-only` labels when restyling. Accessibility ships with the primitive; keep it. Icons come from `lucide-react`.
+
+Tailwind v4:
+
+- Style with semantic tokens (`bg-primary`, `text-muted-foreground`, `border-border`), never raw colors or arbitrary hex (`bg-[#3b82f6]`). Tokens flip for dark mode and theming for free.
+- Theming is CSS variables in `src/app/globals.css` (oklch). The brand accent (`--primary`, `--ring`) is blue `#3b82f6`. Adjust tokens there, not per component. Tailwind v4 has no `tailwind.config.js`; add new tokens via `@theme` in `globals.css`.
+- Arbitrary values (`w-[37px]`) are a last resort. Prefer the spacing scale and existing tokens; if a value recurs, promote it to a token.
+- Mobile-first: write base styles, then layer `sm: md: lg:`. Do not start at desktop and patch downward.
+- RTL-safe by default: use logical utilities (`ps-`, `pe-`, `ms-`, `me-`, `text-start`, `start-0`) instead of left/right ones (`pl-`, `pr-`, `text-left`). They work in both directions with no extra code. For a Hebrew or RTL site, set `<html dir="rtl">` in `layout.tsx` and the rest follows.
+- Compose classes with `cn()` from `@/lib/utils`; do not concatenate class strings by hand. Let `prettier-plugin-tailwindcss` order classes, do not fight it.
+- Reach for `@apply` rarely (small base resets only). Prefer composing utilities in markup or extracting a component; a wall of `@apply` recreates the CSS files Tailwind exists to avoid.
 
 ## AI (Vercel AI Gateway)
 
 - Use the `ai` package. Pass the model as a `"<provider>/<model>"` string (for example `"openai/gpt-4o-mini"` or `"anthropic/claude-sonnet-4.5"`); with `AI_GATEWAY_API_KEY` set, requests route through the gateway, with no per-provider keys.
 - Example endpoint: `src/app/api/chat/route.ts` (`generateText`). To stream, switch to `streamText` plus `toUIMessageStreamResponse()`. Default model is `AI_DEFAULT_MODEL`.
+
+## Validation (zod)
+
+Validate at every boundary. `zod` is the one validation library here, and a schema is the single source of truth for both the runtime shape and its type (`z.infer`). This project is on **zod v4**, so use the top-level format helpers (`z.email()`, `z.uuid()`, `z.url()`), not the deprecated method chains (`z.string().email()`).
+
+The rule that matters most:
+
+- The server is the trust boundary. Always validate on the server, even when the client already validated. Client validation is UX (instant feedback); server validation is security. Never trust client-validated input.
+
+Share one schema across both sides:
+
+- Define the schema in a plain module a client can import, with no server-only imports (no `db`, `lib/env`, or `lib/supabase/server`): `src/lib/validations/<feature>.ts` or a co-located `schema.ts`. Import the same schema in the Server Action and in the form. One schema, two consumers, no drift.
+
+Backend (Server Actions, Route Handlers, env):
+
+- Use `safeParse` for user input so a failure is a value you handle, not a thrown error. Reserve `parse`/throw for cases where failure is a config or programmer error you want to crash on, like `env.ts` at boot.
+- `FormData` is all strings. Convert then validate: `schema.safeParse(Object.fromEntries(formData))`. Coerce non-strings with `z.coerce.number()`, `z.coerce.boolean()`.
+- Validate request bodies in Route Handlers and webhooks the same way before touching `db`.
+- On failure, return a typed result (`{ error: z.flattenError(parsed.error).fieldErrors }`) and read it on the client with `useActionState`; do not throw for expected validation failures. After the boundary, trust `parsed.data` and its inferred type.
+
+Frontend (forms):
+
+- Recommended: React Hook Form + `zodResolver` with the shared schema, for inline field errors as the user types. Not installed yet; add with `npm i react-hook-form @hookform/resolvers` and use shadcn's `Form` primitives.
+- The form gives fast feedback only; the Server Action re-validates the same schema and is the authority. Surface server errors back into form state so both layers agree.
+
+One schema feeding both layers:
+
+```ts
+// src/lib/validations/auth.ts  (no server-only imports: safe for client)
+import { z } from "zod";
+
+export const credentialsSchema = z.object({
+  email: z.email("Enter a valid email."),
+  password: z.string().min(8, "At least 8 characters."),
+});
+
+export type Credentials = z.infer<typeof credentialsSchema>;
+```
+
+```ts
+// src/app/login/actions.ts  (the server is the real boundary)
+"use server";
+import { credentialsSchema } from "@/lib/validations/auth";
+
+export async function login(_prev: unknown, formData: FormData) {
+  const parsed = credentialsSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: z.flattenError(parsed.error).fieldErrors };
+  }
+  // parsed.data is typed and trusted from here on
+  // ... sign in with parsed.data.email / parsed.data.password
+}
+```
+
+Note: today's `login/actions.ts` skips this and passes raw `FormData` straight to Supabase. Wire one feature through this pattern before copying it elsewhere.
 
 ## SEO / GEO
 
@@ -170,13 +249,18 @@ drizzle/                # generated SQL migrations (do not hand-edit)
 
 - One responsibility per file and per function. If a file mixes concerns or passes about 200 lines, split it.
 - Name by intent, no abbreviations. Booleans read as predicates (`isLoading`, `hasAccess`, `canEdit`).
-- Validate at every boundary with `zod`: form input, request bodies, env. Trust internal types after the boundary.
+- Validate every external boundary with `zod` (form input, request bodies, env); see the Validation section. Trust internal types after the boundary.
 - Keep components presentational. Push data access and business rules into `db/` and `lib/`.
 - Handle errors explicitly. Return a typed result or a clear message from actions; do not swallow errors. The one documented exception is the cookie `setAll` no-op in `lib/supabase/server.ts`.
 - TypeScript `strict`. No `any` without a comment explaining why.
 - Async correctness in Next 16: `await createClient()`, and `await` the `params` and `searchParams` props, which are Promises.
-- Server-first: keep data fetching and secrets in Server Components, Actions, and Route Handlers. Add `"use client"` only when you need interactivity.
+- Server-first: data fetching and secrets stay in Server Components, Actions, and Route Handlers.
 - Reuse before you abstract, but do not over-abstract. Extract a shared piece on the third repeat, not the first.
+- Guard clauses over nesting. Return early on errors and edge cases and keep the happy path at the base indentation, rather than wrapping it in deep `if` blocks.
+- Make illegal states unrepresentable. Model variants as discriminated unions (`{ status: "ok"; data } | { status: "error"; message }`) so the compiler forces you to handle each case, instead of optional fields that can combine into nonsense.
+- Parallelize independent awaits with `Promise.all`. Do not create request waterfalls by awaiting in series two fetches that do not depend on each other.
+- Use the route conventions for UI states: `loading.tsx`, `error.tsx`, `not-found.tsx`, and Suspense boundaries, rather than ad hoc spinners and try/catch in the page body.
+- Revalidate precisely after a write. Call `revalidatePath` or `revalidateTag` for the data that actually changed, not a blanket refresh of everything.
 - Accessibility is part of done: label inputs, use semantic elements, keep it keyboard-navigable.
 - Comments explain why, not what. Delete dead code instead of commenting it out.
 - Run `npm run format`, `npm run typecheck`, and `npm run lint` before calling work done.
@@ -202,15 +286,13 @@ From a fresh clone:
 
 ## Install on another machine
 
-Anything with Node 20+ and git:
+Anything with Node 20+ and git. `npm run setup` is safe to re-run.
 
 ```bash
 git clone <your-repo-url> my-app
 cd my-app
-npm run setup
+npm run setup   # installs deps, creates .env from the template, prints what to fill in
 ```
-
-`npm run setup` installs dependencies and creates `.env` from the template, then prints what to fill in. It is safe to re-run.
 
 ## Deploy (Vercel)
 
