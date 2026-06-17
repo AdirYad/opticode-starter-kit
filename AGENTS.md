@@ -24,16 +24,16 @@ The code is organized in layers with a one-way dependency direction. An outer la
 ```
 app/         UI routes and server actions. Thin: it orchestrates, it does not hold business logic.
 components/   Presentational React. ui/ holds generated primitives; feature folders hold composed UI.
-lib/         Cross-cutting helpers: env, supabase clients, utils.
+lib/         Cross-cutting helpers: supabase clients, utils.
 db/          Data access: schema, client, queries. The only place that talks to Postgres.
-config/      Static project configuration (site name, brand, base URL).
+config/      Static project config: site (name, brand, base URL) and env (client/server/merged).
 ```
 
 Dependency rules:
 
 - `db/` and `lib/` never import from `app/` or `components/`.
 - `components/` never imports from `app/`. Components receive data through props.
-- Only server code (Server Components, Server Actions, Route Handlers) imports `db`, `lib/env`, or `lib/supabase/server`.
+- Only server code (Server Components, Server Actions, Route Handlers) imports `db`, `config/env`, or `lib/supabase/server`.
 
 Request lifecycle:
 
@@ -45,7 +45,7 @@ Server vs client:
 
 - Everything is a Server Component by default. Add `"use client"` only for interactivity (state, effects, event handlers, browser APIs).
 - Keep client components small and at the leaves of the tree. Fetch on the server and pass data down as props.
-- Never import a server-only module (`db`, `env`, `lib/supabase/server`) into a client component.
+- Never import a server-only module (`db`, `config/env`, `lib/supabase/server`) into a client component.
 
 Data flow:
 
@@ -55,19 +55,20 @@ Data flow:
 
 ## Where things go
 
-| You need to add                 | Put it in                                                                |
-| ------------------------------- | ------------------------------------------------------------------------ |
-| A page                          | `src/app/<route>/page.tsx` (Server Component)                            |
-| A protected page                | a route under a prefix in `proxy.ts` `protectedPaths`                    |
-| A form mutation                 | a Server Action in `actions.ts` next to the route                        |
-| A webhook or streaming endpoint | `src/app/api/<name>/route.ts`                                            |
-| A database table                | `src/db/schema.ts`, then a migration                                     |
-| A reusable query                | `src/db/queries/<name>.ts` (server-only)                                 |
-| A UI primitive (button, dialog) | `npx shadcn@latest add <name>`, lands in `components/ui`                 |
-| A composed feature component    | `src/components/<feature>/`                                              |
-| A shared helper or hook         | `src/lib/`                                                               |
-| Project name, brand, base URL   | `src/config/site.ts`                                                     |
-| An environment variable         | `src/lib/env.ts` (server) or `NEXT_PUBLIC_` (client), and `.env.example` |
+| You need to add                 | Put it in                                                            |
+| ------------------------------- | -------------------------------------------------------------------- |
+| A page                          | `src/app/<route>/page.tsx` (Server Component)                        |
+| A protected page                | a route under a prefix in `proxy.ts` `protectedPaths`                |
+| A form mutation                 | a Server Action in `actions.ts` next to the route                    |
+| A webhook or streaming endpoint | `src/app/api/<name>/route.ts`                                        |
+| A database table                | `src/db/schema.ts`, then a migration                                 |
+| A reusable query                | `src/db/queries/<name>.ts` (server-only)                             |
+| A UI primitive (button, dialog) | `npx shadcn@latest add <name>`, lands in `components/ui`             |
+| A composed feature component    | `src/components/<feature>/`                                          |
+| A shared helper or hook         | `src/lib/`                                                           |
+| Project name, brand, base URL   | `src/config/site.ts`                                                 |
+| A public (browser) env var      | `config/env/client.ts` + a `NEXT_PUBLIC_` prefix, and `.env.example` |
+| A server (secret) env var       | `config/env/server.ts`, and `.env.example`                           |
 
 ## Commands
 
@@ -98,7 +99,12 @@ A Husky `pre-commit` hook runs `lint-staged`, which auto-fixes staged files with
 - `.env.example` is the tracked template. Keep it in sync when adding a variable.
 - Run `npm run env` to fill or update `.env` interactively: it reads `.env.example`, asks for each variable with its inline help, and keeps existing answers as defaults.
 - Never commit `.env`, print secrets, or expose a non-`NEXT_PUBLIC_` variable to client code.
-- Server vars are validated once in `src/lib/env.ts`; a missing or invalid var fails fast with a clear message. Add new server vars there. Public vars use the `NEXT_PUBLIC_` prefix and are read directly from `process.env`.
+- Env is validated and typed in `src/config/env/`, the single source of truth. Read env through it, never `process.env` directly (outside these files):
+  - `client.ts` exports `clientEnv`: only `NEXT_PUBLIC_` vars, browser-safe.
+  - `server.ts` exports `serverEnv`: secrets. It is `server-only`, so importing it from the browser is a build error.
+  - `index.ts` exports the merged `env` (`clientEnv` + `serverEnv`).
+- Import rule: client/browser code imports `@/config/env/client`; server code (Server Components, Actions, Route Handlers, `lib`, `db`) imports the merged `@/config/env`. Never import `@/config/env` or `@/config/env/server` into a Client Component.
+- To add a variable: public ones go in `client.ts` (with the `NEXT_PUBLIC_` prefix), secrets go in `server.ts`; mirror every one in `.env.example`. A missing or invalid var fails fast at startup.
 
 ## Folder structure
 
@@ -110,12 +116,13 @@ src/
     dashboard/          # example protected route
     robots.ts sitemap.ts# SEO
   components/ui/         # shadcn components (generated, edit sparingly)
-  config/site.ts        # project name, description, base URL
+  config/
+    site.ts             # project name, description, base URL
+    env/                # env single source of truth: client.ts · server.ts · index.ts (merged)
   db/
     index.ts            # database client
     schema.ts           # Drizzle schema, the source of truth for tables
   lib/
-    env.ts              # validated server env
     supabase/           # client.ts (browser) · server.ts · middleware.ts
     utils.ts            # cn()
   proxy.ts              # refreshes auth session + guards private routes (Next 16 convention)
@@ -127,7 +134,9 @@ drizzle/                # generated SQL migrations (do not hand-edit)
 
 - One connection string, `DATABASE_URL`, is used everywhere: the app at runtime and `drizzle-kit` migrations.
 - `prepare: false` is set in `src/db/index.ts` so the same URL works with any Supabase connection string, including the transaction pooler, which does not support prepared statements. Do not remove that flag.
-- Workflow: edit `src/db/schema.ts`, run `npm run db:generate`, review the SQL in `drizzle/`, then `npm run db:migrate`. `db:push` skips the migration file; use it only against your local scratch DB, never anywhere shared (staging, prod, a teammate's machine).
+- Workflow: after ANY change to `src/db/schema.ts`, immediately run `npm run db:generate` then `npm run db:migrate` in the same change. Do not leave a schema edit ungenerated or a generated migration unapplied. Review the SQL in `drizzle/` and commit it together with the schema change.
+- `db:push` skips the migration file; use it only against your local scratch DB while prototyping, never anywhere shared (staging, prod, a teammate's machine).
+- Migrations run automatically against production on push to `master` (see Deploy). So every schema change must ship its committed migration, or production drifts from the code. Prefer additive, backward-compatible migrations so the new migration is safe to apply before the new code finishes deploying.
 - Column naming: write camelCase in the schema; it maps to snake_case columns automatically (`casing: "snake_case"`). Do not rename existing columns casually, it breaks data.
 - Row Level Security: Supabase tables are exposed via PostgREST. Enable RLS and write policies for any table holding user data. Drizzle runs server-side and bypasses RLS, so keep all DB writes in server code, never in the browser.
 - Schema is the single source of truth for types. Derive row and insert types with `typeof table.$inferSelect` and `typeof table.$inferInsert`; never hand-write a parallel `interface` that can drift.
@@ -313,3 +322,11 @@ npm run setup   # installs deps, creates .env from the template, prints what to 
 2. Add every variable from `.env.example` in Project, Settings, Environment Variables.
 3. AI Gateway works automatically on Vercel; locally it needs `AI_GATEWAY_API_KEY`.
 4. Build command `npm run build`, output is detected automatically.
+
+### Database migrations on deploy
+
+Migrations apply automatically when you push to `master`, via `.github/workflows/migrate.yml`: it checks out the repo, installs, and runs `npm run db:migrate` against production. `drizzle-kit` records which migrations have run, so the job is idempotent and a no-op when nothing is pending.
+
+One-time setup: add a `DATABASE_URL` repository secret in GitHub (Settings, Secrets and variables, Actions) pointing at the production database. Keep migrations in this separate job, not in the Vercel build, so a build retry never re-runs schema changes.
+
+The job runs in parallel with the Vercel deploy, so write additive, backward-compatible migrations: the new migration must be safe to apply while the old code is still serving. For an unavoidable breaking change, split it across two deploys (add the new shape, ship code that uses it, then remove the old shape in a later change).

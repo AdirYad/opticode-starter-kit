@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 
 /**
  * Transactional email via Resend.

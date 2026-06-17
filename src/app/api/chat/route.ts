@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 
 // Allow responses up to 30s on serverless.
 export const maxDuration = 30;
