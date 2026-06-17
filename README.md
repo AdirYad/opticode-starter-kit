@@ -11,7 +11,8 @@ A production-grade starter for building real web apps fast. Auth, database, AI, 
 - **Auth** via Supabase + `@supabase/ssr` (cookie sessions, protected routes through `src/proxy.ts`).
 - **Database** as Supabase Postgres through Drizzle ORM, one `DATABASE_URL`, typed schema as the source of truth.
 - **AI** through the Vercel AI Gateway: one key, any model, no per-provider setup.
-- **UI** with shadcn/ui on Tailwind v4 (semantic tokens, dark mode, RTL-safe).
+- **Email** via Resend, with a `sendEmail()` helper (optional, server-side only).
+- **UI** with shadcn/ui on Tailwind v4 (semantic tokens, dark mode via next-themes with a toggle, RTL-safe).
 - **SEO** with per-page metadata, `robots.ts`, `sitemap.ts`, and `public/llms.txt`.
 
 ## Prerequisites
@@ -25,10 +26,10 @@ A production-grade starter for building real web apps fast. Auth, database, AI, 
 ```bash
 git clone https://github.com/AdirYad/opticode-starter-kit.git my-app
 cd my-app
-npm run setup        # installs dependencies and creates .env from the template
+npm run setup        # installs dependencies, then fills .env interactively
 ```
 
-Fill `.env` with real values (see the table below), then:
+Setup asks for each value (re-run anytime with `npm run env`). Then:
 
 ```bash
 npm run db:push      # create the database tables
@@ -39,14 +40,16 @@ npm run dev          # http://localhost:3000
 
 Copy `.env.example` to `.env` (the setup script does this) and fill it in. `.env.example` has inline notes; this is the summary of where each value comes from.
 
-| Variable                        | Required | Where to get it                                                                                                 |
-| ------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_APP_URL`           | Prod     | Your app URL. Local defaults to `http://localhost:3000`; set your real domain in production.                    |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Yes      | Supabase Dashboard, your project, Settings, API. The Project URL.                                               |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes      | Same page, the `anon` / public key. Browser-safe.                                                               |
-| `DATABASE_URL`                  | Yes      | Supabase Dashboard, "Connect" button, ORMs or Connection string. Insert your DB password. Use a pooler on IPv4. |
-| `AI_GATEWAY_API_KEY`            | For AI   | Vercel Dashboard, AI Gateway, API Keys. Injected automatically on Vercel deploys.                               |
-| `AI_DEFAULT_MODEL`              | No       | A `<provider>/<model>` string. Defaults to `openai/gpt-4o-mini`.                                                |
+| Variable                        | Required  | Where to get it                                                                                                 |
+| ------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL`           | Prod      | Your app URL. Local defaults to `http://localhost:3000`; set your real domain in production.                    |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes       | Supabase Dashboard, your project, Settings, API. The Project URL.                                               |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes       | Same page, the `anon` / public key. Browser-safe.                                                               |
+| `DATABASE_URL`                  | Yes       | Supabase Dashboard, "Connect" button, ORMs or Connection string. Insert your DB password. Use a pooler on IPv4. |
+| `AI_GATEWAY_API_KEY`            | For AI    | Vercel Dashboard, AI Gateway, API Keys. Injected automatically on Vercel deploys.                               |
+| `AI_DEFAULT_MODEL`              | No        | A `<provider>/<model>` string. Defaults to `openai/gpt-4o-mini`.                                                |
+| `RESEND_API_KEY`                | For email | Resend Dashboard, API Keys (resend.com/api-keys). Optional.                                                     |
+| `EMAIL_FROM`                    | For email | Verified sender. `onboarding@resend.dev` in dev, your domain in prod.                                           |
 
 Server vars (`DATABASE_URL`, `AI_*`) are validated at startup in `src/lib/env.ts` and fail fast with a clear message. `NEXT_PUBLIC_` vars ship to the browser, so never put a secret (like the Supabase `service_role` key) behind that prefix.
 
@@ -76,8 +79,9 @@ Then set the brand color in `src/app/globals.css` (`--primary`), define your tab
 
 | Script                 | Does                                           |
 | ---------------------- | ---------------------------------------------- |
-| `npm run setup`        | Install deps and create `.env` on a fresh box  |
+| `npm run setup`        | Install deps, then fill `.env` interactively   |
 | `npm run init-project` | Set name, description, brand for a new project |
+| `npm run env`          | Fill or update `.env` interactively            |
 | `npm run dev`          | Dev server (Turbopack)                         |
 | `npm run build`        | Production build                               |
 | `npm run start`        | Serve the production build                     |

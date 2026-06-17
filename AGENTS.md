@@ -13,6 +13,7 @@ A production-grade starter for building real web apps. The stack is fixed and op
 | Database  | **Supabase** Postgres via **Drizzle ORM** (`postgres-js`)      |
 | Auth      | **Supabase Auth** via `@supabase/ssr` (cookie sessions)        |
 | AI        | **Vercel AI Gateway** via the **AI SDK** (`ai`)                |
+| Email     | **Resend** (transactional, optional)                           |
 | Hosting   | **Vercel**                                                     |
 | Language  | **TypeScript**, `strict` mode                                  |
 
@@ -73,8 +74,9 @@ Data flow:
 Use **npm**.
 
 ```bash
-npm run setup        # one-command install on a fresh machine (deps + env file)
+npm run setup        # install deps, then fill .env interactively (fresh machine)
 npm run init-project # set name, description, brand for a new project
+npm run env          # fill or update .env interactively (asks for each variable)
 npm run dev          # local dev server (Turbopack)
 npm run build        # production build
 npm run typecheck    # tsc --noEmit, run before declaring work done
@@ -94,6 +96,7 @@ A Husky `pre-commit` hook runs `lint-staged`, which auto-fixes staged files with
 
 - Config lives in `.env` (gitignored). This project does not use `.env.local`.
 - `.env.example` is the tracked template. Keep it in sync when adding a variable.
+- Run `npm run env` to fill or update `.env` interactively: it reads `.env.example`, asks for each variable with its inline help, and keeps existing answers as defaults.
 - Never commit `.env`, print secrets, or expose a non-`NEXT_PUBLIC_` variable to client code.
 - Server vars are validated once in `src/lib/env.ts`; a missing or invalid var fails fast with a clear message. Add new server vars there. Public vars use the `NEXT_PUBLIC_` prefix and are read directly from `process.env`.
 
@@ -167,7 +170,8 @@ shadcn/ui:
 - New visual variants belong in the component's `cva` config (the `*Variants` object), not as one-off `className` overrides scattered across the app. Define a variant once, reuse it everywhere.
 - For a link styled as a button, apply `buttonVariants({ ... })` to a `<Link>` (a real anchor). Do not wrap a `<Link>` in `<Button>`: this Button is built on Base UI and expects a native `<button>`, so a non-button render breaks accessibility and warns in the console. When you genuinely need Button semantics on another element, use the `asChild` (Slot) prop, which is the supported polymorphic form.
 - Forms: see the Validation section. One zod schema, React Hook Form + `zodResolver` on the client, the same schema re-checked in the Server Action.
-- Toasts: use Sonner (`sonner`), the current shadcn toast.
+- Toasts: use Sonner (`sonner`), the current shadcn toast. `<Toaster richColors />` is mounted in `layout.tsx`; trigger with `import { toast } from "sonner"`.
+- Dark mode is wired via next-themes: `Providers` in `layout.tsx` (class strategy, system default), with a `ThemeToggle` component. Switch via the toggle or `useTheme()`, and rely on tokens so both modes work for free.
 - Do not strip the built-in `aria-*`, focus rings, or `sr-only` labels when restyling. Accessibility ships with the primitive; keep it. Icons come from `lucide-react`.
 
 Tailwind v4:
@@ -184,6 +188,15 @@ Tailwind v4:
 
 - Use the `ai` package. Pass the model as a `"<provider>/<model>"` string (for example `"openai/gpt-4o-mini"` or `"anthropic/claude-sonnet-4.5"`); with `AI_GATEWAY_API_KEY` set, requests route through the gateway, with no per-provider keys.
 - Example endpoint: `src/app/api/chat/route.ts` (`generateText`). To stream, switch to `streamText` plus `toUIMessageStreamResponse()`. Default model is `AI_DEFAULT_MODEL`.
+
+## Email (Resend)
+
+- Send transactional email with `sendEmail()` from `src/lib/email.ts` (Resend under the hood). Call it from Server Actions or Route Handlers, never the browser.
+- `RESEND_API_KEY` is optional: the app runs without it, and `sendEmail` throws a clear error if called unconfigured. `EMAIL_FROM` must be a verified sender (use `onboarding@resend.dev` in dev, your own domain in prod).
+
+## MCP
+
+- An `.mcp.json` at the repo root registers the **context7** server (live, version-accurate library docs). Claude Code discovers it automatically; approve it on first use. Skills live under `.agents/`; project MCP servers live in `.mcp.json`.
 
 ## Validation (zod)
 

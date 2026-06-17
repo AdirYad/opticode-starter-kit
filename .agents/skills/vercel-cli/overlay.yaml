@@ -6,11 +6,11 @@ metadata:
     - "https://vercel.com/docs/cli"
   sitemap: "https://vercel.com/sitemap/docs.xml"
   pathPatterns:
-    - 'vercel.json'
-    - 'vercel.ts'
-    - '.vercel/**'
-    - '.vercelignore'
-    - 'now.json'
+    - "vercel.json"
+    - "vercel.ts"
+    - ".vercel/**"
+    - ".vercelignore"
+    - "now.json"
   bashPatterns:
     - '^\s*vercel(?:\s|$)'
     - '^\s*vc(?:\s|$)'
@@ -74,12 +74,10 @@ retrieval:
     - vercel logs
     - vercel metrics
 chainTo:
-  -
-    pattern: '"functions"\s*:\s*\{|"maxDuration"\s*:|"memory"\s*:'
+  - pattern: '"functions"\s*:\s*\{|"maxDuration"\s*:|"memory"\s*:'
     targetSkill: vercel-functions
-    message: 'Functions configuration detected in vercel.json — loading Vercel Functions guidance for runtime options, streaming, and Fluid Compute.'
+    message: "Functions configuration detected in vercel.json — loading Vercel Functions guidance for runtime options, streaming, and Fluid Compute."
     skipIfFileContains: '"crons"\s*:'
-  -
-    pattern: '"redirects"\s*:\s*\[|"rewrites"\s*:\s*\[|"headers"\s*:\s*\['
+  - pattern: '"redirects"\s*:\s*\[|"rewrites"\s*:\s*\[|"headers"\s*:\s*\['
     targetSkill: routing-middleware
-    message: 'Routing rules in vercel.json — loading Routing Middleware guidance for platform-level request interception patterns.'
+    message: "Routing rules in vercel.json — loading Routing Middleware guidance for platform-level request interception patterns."

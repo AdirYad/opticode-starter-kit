@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const features = [
   { title: "Next.js 16", description: "App Router, React 19, Turbopack." },
@@ -11,7 +12,10 @@ const features = [
 
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-svh max-w-5xl flex-col justify-center gap-10 px-6 py-16">
+    <main className="relative mx-auto flex min-h-svh max-w-5xl flex-col justify-center gap-10 px-6 py-16">
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
       <section className="space-y-6">
         <span className="bg-primary/10 text-primary inline-flex rounded-full px-3 py-1 text-sm font-medium">
           OptiCode Starter Kit

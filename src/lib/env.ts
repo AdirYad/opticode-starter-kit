@@ -12,12 +12,16 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required (Supabase connection string)."),
   AI_GATEWAY_API_KEY: z.string().min(1, "AI_GATEWAY_API_KEY is required (Vercel AI Gateway)."),
   AI_DEFAULT_MODEL: z.string().min(1).default("openai/gpt-4o-mini"),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().min(1).default("onboarding@resend.dev"),
 });
 
 const parsed = schema.safeParse({
   DATABASE_URL: process.env.DATABASE_URL,
   AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
   AI_DEFAULT_MODEL: process.env.AI_DEFAULT_MODEL,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  EMAIL_FROM: process.env.EMAIL_FROM,
 });
 
 if (!parsed.success) {
