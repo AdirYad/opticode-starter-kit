@@ -136,7 +136,7 @@ drizzle/                # generated SQL migrations (do not hand-edit)
 - `prepare: false` is set in `src/db/index.ts` so the same URL works with any Supabase connection string, including the transaction pooler, which does not support prepared statements. Do not remove that flag.
 - Workflow: after ANY change to `src/db/schema.ts`, immediately run `npm run db:generate` then `npm run db:migrate` in the same change. Do not leave a schema edit ungenerated or a generated migration unapplied. Review the SQL in `drizzle/` and commit it together with the schema change.
 - `db:push` skips the migration file; use it only against your local scratch DB while prototyping, never anywhere shared (staging, prod, a teammate's machine).
-- Migrations run automatically against production on push to `master` (see Deploy). So every schema change must ship its committed migration, or production drifts from the code. Prefer additive, backward-compatible migrations so the new migration is safe to apply before the new code finishes deploying.
+- Migrations run automatically against production on every deploy (see Deploy). So every schema change must ship its committed migration, or production drifts from the code. Prefer additive, backward-compatible migrations so the new migration is safe to apply before the new code finishes deploying.
 - Column naming: write camelCase in the schema; it maps to snake_case columns automatically (`casing: "snake_case"`). Do not rename existing columns casually, it breaks data.
 - Row Level Security: Supabase tables are exposed via PostgREST. Enable RLS and write policies for any table holding user data. Drizzle runs server-side and bypasses RLS, so keep all DB writes in server code, never in the browser.
 - Schema is the single source of truth for types. Derive row and insert types with `typeof table.$inferSelect` and `typeof table.$inferInsert`; never hand-write a parallel `interface` that can drift.
@@ -325,8 +325,8 @@ npm run setup   # installs deps, creates .env from the template, prints what to 
 
 ### Database migrations on deploy
 
-Migrations apply automatically when you push to `master`, via `.github/workflows/migrate.yml`: it checks out the repo, installs, and runs `npm run db:migrate` against production. `drizzle-kit` records which migrations have run, so the job is idempotent and a no-op when nothing is pending.
+Migrations apply automatically on every production deploy, with no extra setup. The `build` script runs `scripts/migrate-on-deploy.mjs` before `next build`; on a Vercel production build (`VERCEL_ENV=production`) it runs `npm run db:migrate` against `DATABASE_URL`, then builds. Local builds and Vercel preview builds skip it, so `npm run build` on your machine never touches a database. `drizzle-kit` records which migrations have run, so it is idempotent.
 
-One-time setup: add a `DATABASE_URL` repository secret in GitHub (Settings, Secrets and variables, Actions) pointing at the production database. Keep migrations in this separate job, not in the Vercel build, so a build retry never re-runs schema changes.
+Production gets its schema changes the moment you deploy, using the same `DATABASE_URL` already set in Vercel. There is nothing else to configure (no GitHub secrets, no CI). The only requirement is that each schema change ships its committed migration (see the Database section).
 
-The job runs in parallel with the Vercel deploy, so write additive, backward-compatible migrations: the new migration must be safe to apply while the old code is still serving. For an unavoidable breaking change, split it across two deploys (add the new shape, ship code that uses it, then remove the old shape in a later change).
+Write additive, backward-compatible migrations: a migration runs just before the new code goes live, so it must be safe while the old code is briefly still serving. For an unavoidable breaking change, split it across two deploys (add the new shape, ship code that uses it, then remove the old shape later).
